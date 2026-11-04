@@ -1,0 +1,11 @@
+.env
+.token.json
+__pycache__/
+*.pyc
+instastd/
+.venv/
+venv/
+.DS_Store
+.idea/
+.vscode/
+*.log
