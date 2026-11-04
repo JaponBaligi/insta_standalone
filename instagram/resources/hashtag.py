@@ -19,6 +19,7 @@ DEFAULT_MEDIA_FIELDS = (
     "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count,children"
 )
 MAX_PAGE_SIZE = 50
+DEFAULT_MAX_ITEMS = 500  # safety ceiling for return_all
 
 
 def _clean_name(hashtag_name: str) -> str:
@@ -31,18 +32,8 @@ def _clean_name(hashtag_name: str) -> str:
 
 
 def _user_id(client: GraphClient) -> str:
-    """Hashtag endpoint'leri gercek IG kullanici ID'si ister.
-
-    node 'me' ise bir kez /me?fields=id ile cozer ve client uzerinde saklar.
-    """
-    if client.node != "me":
-        return client.node
-    cached = getattr(client, "_ig_user_id", None)
-    if cached:
-        return cached
-    user_id = client.get("me", fields="id")["id"]
-    client._ig_user_id = user_id
-    return user_id
+    """Hashtag endpoints need the real IG user ID (IG_NODE, validated in config)."""
+    return client.node
 
 
 # --- Search -----------------------------------------------------------------
@@ -96,17 +87,21 @@ def _media(
     return_all: bool,
     limit: int,
     fields: str,
+    max_items: int,
 ) -> list[dict[str, Any]]:
     if not hashtag_id:
         hashtag_id = get_hashtag_id(client, hashtag_name)
     if not return_all and limit < 1:
         raise ValueError("limit en az 1 olmali")
+    if return_all and max_items < 1:
+        raise ValueError("max_items en az 1 olmali")
 
-    page_size = MAX_PAGE_SIZE if return_all else min(limit, MAX_PAGE_SIZE)
+    cap = max_items if return_all else limit
+    page_size = min(cap, MAX_PAGE_SIZE)
     items: list[dict[str, Any]] = []
     for media in _iter_media(client, edge, hashtag_id, fields, page_size):
         items.append(media)
-        if not return_all and len(items) >= limit:
+        if len(items) >= cap:
             break
     return items
 
@@ -119,9 +114,12 @@ def get_recent_media(
     return_all: bool = False,
     limit: int = 50,
     fields: str = DEFAULT_MEDIA_FIELDS,
+    max_items: int = DEFAULT_MAX_ITEMS,
 ) -> list[dict[str, Any]]:
-    """Hashtag ile etiketlenen en yeni medyalar (liste dondurur)."""
-    return _media(client, "recent_media", hashtag_id, hashtag_name, return_all, limit, fields)
+    """Hashtag ile etiketlenen en yeni medyalar (liste dondurur).
+
+    return_all=True iken en fazla max_items sonuc doner."""
+    return _media(client, "recent_media", hashtag_id, hashtag_name, return_all, limit, fields, max_items)
 
 
 def get_top_media(
@@ -132,6 +130,9 @@ def get_top_media(
     return_all: bool = False,
     limit: int = 50,
     fields: str = DEFAULT_MEDIA_FIELDS,
+    max_items: int = DEFAULT_MAX_ITEMS,
 ) -> list[dict[str, Any]]:
-    """Hashtag ile etiketlenen en populer medyalar (liste dondurur)."""
-    return _media(client, "top_media", hashtag_id, hashtag_name, return_all, limit, fields)
+    """Hashtag ile etiketlenen en populer medyalar (liste dondurur).
+
+    return_all=True iken en fazla max_items sonuc doner."""
+    return _media(client, "top_media", hashtag_id, hashtag_name, return_all, limit, fields, max_items)

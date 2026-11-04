@@ -19,3 +19,10 @@ class MediaProcessingError(InstagramError):
 
 class MediaTimeoutError(InstagramError):
     '''Raised when there is a timeout error with media processing.'''
+
+class CarouselItemError(InstagramError):
+    '''Raised when one carousel child fails; the original error is __cause__.'''
+    def __init__(self, index: int, media_type: str, cause: Exception):
+        self.index = index
+        self.media_type = media_type
+        super().__init__(f"Carousel item {index} ({media_type}) failed: {cause}")

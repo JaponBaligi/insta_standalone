@@ -1,4 +1,5 @@
 #client.py
+import logging
 import time
 import warnings
 from typing import Any, Optional
@@ -10,6 +11,8 @@ from .config import Config, load_config
 from .exceptions import GraphAPIError
 
 REFRESH_THRESHOLD_SECONDS = 7 * 24 * 3600
+
+log = logging.getLogger(__name__)
 
 
 class GraphClient:
@@ -29,11 +32,14 @@ class GraphClient:
         self._expiry_checked = False
 
         stored = token_store.load()
+        # .env token is only the bootstrap; once a token is stored (and kept
+        # fresh by auto-refresh) the stored one wins on purpose.
         self._token = stored["access_token"] if stored else self.config.access_token
+        log.info("Token source: %s", "token/.token.json" if stored else ".env (bootstrap)")
 
     @property
     def node(self) -> str:
-        """The account the requests act on ("me" or an Instagram account ID)."""
+        """The account the requests act on (Instagram account ID)."""
         return self.config.node
 
     @property

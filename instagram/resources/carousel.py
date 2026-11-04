@@ -6,6 +6,7 @@ from typing import Any, Iterable, Optional, Union
 from urllib.parse import urlparse
 
 from ..client import GraphClient
+from ..exceptions import CarouselItemError
 from ..publisher import create_container, publish_container, wait_until_ready
 from .image import CAPTION_MAX, _csv_or_list, build_image_params, build_product_tags
 
@@ -25,6 +26,15 @@ def detect_media_type(url: str) -> str:
     """Uzantidan tahmin et; emin degilse 'image' (n8n'deki gibi)."""
     path = urlparse(url).path.lower()
     return "video" if any(path.endswith(ext) for ext in VIDEO_EXTENSIONS) else "image"
+
+
+def _validate_url(url: str, index: int) -> None:
+    """Fail before any API call if an item URL is not a usable http(s) URL."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError(
+            f"Carousel item {index}: invalid URL (must start with http:// or https://): {url}"
+        )
 
 
 def normalize_items(
@@ -49,6 +59,7 @@ def normalize_items(
 
         if not url:
             raise ValueError(f"Carousel ogesi {i}: url bos")
+        _validate_url(url, i)
         if kind not in MEDIA_TYPES:
             raise ValueError(f"Carousel ogesi {i}: gecersiz media_type '{kind}'")
         if kind == "auto":
@@ -132,9 +143,12 @@ def publish_carousel(
     normalized = normalize_items(items, media_type)
 
     child_ids: list[str] = []
-    for item in normalized:
-        child_id = create_container(client, **build_child_params(item))
-        wait_until_ready(client, child_id, timeout=timeout, interval=interval)
+    for index, item in enumerate(normalized, start=1):
+        try:
+            child_id = create_container(client, **build_child_params(item))
+            wait_until_ready(client, child_id, timeout=timeout, interval=interval)
+        except Exception as exc:
+            raise CarouselItemError(index, item["media_type"], exc) from exc
         child_ids.append(child_id)
 
     parent_id = create_container(

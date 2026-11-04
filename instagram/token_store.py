@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-STORE_PATH = Path(".token.json")
+STORE_PATH = Path(__file__).resolve().parent.parent / "token" / ".token.json"
 
 
 def load() -> Optional[dict]:
@@ -24,6 +24,7 @@ def save(token: str, expires_in: Optional[int] = None) -> dict:
         "expires_at": now + int(expires_in) if expires_in else None,
         "saved_at": now,
     }
+    STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
     STORE_PATH.write_text(json.dumps(data), encoding="utf-8")
     return data
 

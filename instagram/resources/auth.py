@@ -1,5 +1,6 @@
 from typing import Optional
 
+from .. import token_store
 from ..client import GraphClient
 from ..exceptions import ConfigError
 
@@ -31,9 +32,15 @@ def exchange_access_token(
 
 
 def refresh_access_token(client: GraphClient) -> dict:
-    """Refresh the configured long-lived token.
+    """Refresh the current long-lived token and persist the result.
 
     Facebook-login tokens have no dedicated refresh endpoint, so this
-    exchanges the current token again to get a new 60-day token.
+    exchanges the current token (client.token, which already reflects any
+    automatic refresh) again to get a new 60-day token.
     """
-    return exchange_access_token(client, client.config.access_token)
+    result = exchange_access_token(client, client.token)
+    new_token = result.get("access_token")
+    if new_token:
+        client._token = new_token
+        token_store.save(new_token, result.get("expires_in"))
+    return result
