@@ -1,22 +1,13 @@
-"""Carousel resource: n8n Instagram node -> Carousel / Publish (tek operasyon).
-
-n8n'deki iki giris modu:
-  - Manual Media Items   -> items=[{"media_type": "image", "url": ...}, ...]
-  - Use Field From Input -> items=[url, url, ...] + media_type="auto"|"image"|"video"
-                            (veya carousel_items_from_field ile bir dict'ten okunur)
-
-Akis: her child icin container -> hazir olana kadar bekle -> parent
-(CAROUSEL) container -> bekle -> media_publish.
-"""
 from __future__ import annotations
 
+import json
 import logging
-from typing import Any, Iterable, Union
+from typing import Any, Iterable, Optional, Union
 from urllib.parse import urlparse
 
 from ..client import GraphClient
 from ..publisher import create_container, publish_container, wait_until_ready
-from .image import CAPTION_MAX, build_image_params
+from .image import CAPTION_MAX, _csv_or_list, build_image_params, build_product_tags
 
 log = logging.getLogger(__name__)
 
@@ -40,21 +31,19 @@ def normalize_items(
     items: Iterable[Union[str, dict]],
     media_type: str = "auto",
 ) -> list[dict[str, str]]:
-    """Girdiyi [{'media_type': 'image'|'video', 'url': ...}] listesine cevirir.
 
-    - str eleman: media_type parametresine gore (auto ise uzantidan)
-    - dict eleman: 'media_type' (yoksa auto) ve 'url' (veya image_url / video_url)
-    """
     if media_type not in MEDIA_TYPES:
         raise ValueError(f"media_type su degerlerden biri olmali: {sorted(MEDIA_TYPES)}")
 
-    out: list[dict[str, str]] = []
+    out: list[dict[str, Any]] = []
     for i, item in enumerate(items, start=1):
+        user_tags = None
         if isinstance(item, str):
             url, kind = item.strip(), media_type
         elif isinstance(item, dict):
             url = str(item.get("url") or item.get("image_url") or item.get("video_url") or "").strip()
             kind = str(item.get("media_type") or media_type).lower()
+            user_tags = item.get("user_tags")
         else:
             raise ValueError(f"Carousel ogesi {i}: str veya dict olmali")
 
@@ -64,7 +53,10 @@ def normalize_items(
             raise ValueError(f"Carousel ogesi {i}: gecersiz media_type '{kind}'")
         if kind == "auto":
             kind = detect_media_type(url)
-        out.append({"media_type": kind, "url": url})
+        entry: dict[str, Any] = {"media_type": kind, "url": url}
+        if user_tags:
+            entry["user_tags"] = user_tags
+        out.append(entry)
 
     if not MIN_ITEMS <= len(out) <= MAX_ITEMS:
         raise ValueError(f"Carousel {MIN_ITEMS}-{MAX_ITEMS} oge icermeli, gelen: {len(out)}")
@@ -85,10 +77,41 @@ def carousel_items_from_field(
     return normalize_items(urls, media_type)
 
 
-def build_child_params(item: dict[str, str]) -> dict[str, Any]:
+def build_child_params(item: dict[str, Any]) -> dict[str, Any]:
     if item["media_type"] == "image":
-        return build_image_params(item["url"], is_carousel_item=True)
+        return build_image_params(
+            item["url"], is_carousel_item=True, user_tags=item.get("user_tags")
+        )
+    if item.get("user_tags"):
+        log.warning("Video child'da user_tags desteklenmiyor, atlandi: %s", item["url"])
     return {"media_type": "VIDEO", "video_url": item["url"], "is_carousel_item": True}
+
+
+def build_parent_params(
+    child_ids: list[str],
+    caption: str = "",
+    *,
+    collaborators: Any = None,
+    location_id: str = "",
+    product_tags: Optional[Iterable[dict]] = None,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {
+        "media_type": "CAROUSEL",
+        "children": ",".join(child_ids),
+    }
+    if caption:
+        params["caption"] = caption
+    if location_id:
+        params["location_id"] = str(location_id)
+
+    collabs = _csv_or_list(collaborators)
+    if collabs:
+        params["collaborators"] = json.dumps(collabs)
+
+    pt = build_product_tags(product_tags)
+    if pt:
+        params["product_tags"] = json.dumps(pt)
+    return params
 
 
 def publish_carousel(
@@ -97,20 +120,17 @@ def publish_carousel(
     caption: str = "",
     *,
     media_type: str = "auto",
+    collaborators: Any = None,
+    location_id: str = "",
+    product_tags: Optional[Iterable[dict]] = None,
     timeout: int = CAROUSEL_TIMEOUT,
     interval: int = 5,
 ) -> dict[str, Any]:
-    """Carousel / Publish.
-
-    Manual:  publish_carousel(client, [{"media_type": "image", "url": "..."},
-                                       {"media_type": "video", "url": "..."}], "caption")
-    Dizi:    publish_carousel(client, ["a.jpg", "b.mp4"], "caption", media_type="auto")
-    """
     if len(caption or "") > CAPTION_MAX:
         raise ValueError(f"caption en fazla {CAPTION_MAX} karakter olabilir")
 
     normalized = normalize_items(items, media_type)
-    
+
     child_ids: list[str] = []
     for item in normalized:
         child_id = create_container(client, **build_child_params(item))
@@ -119,9 +139,13 @@ def publish_carousel(
 
     parent_id = create_container(
         client,
-        media_type="CAROUSEL",
-        children=",".join(child_ids),
-        caption=caption or None,
+        **build_parent_params(
+            child_ids,
+            caption,
+            collaborators=collaborators,
+            location_id=location_id,
+            product_tags=product_tags,
+        ),
     )
     wait_until_ready(client, parent_id, timeout=timeout, interval=interval)
 
