@@ -3,6 +3,9 @@
 Operasyonlar (n8n'deki sirayla):
   Delete, Disable Comments, Enable Comments, Hide, List,
   Send Private Reply, Unhide
+
+Extras (Graph API / gap close):
+  Create Comment, Reply To Comment
 """
 from __future__ import annotations
 
@@ -98,3 +101,17 @@ def send_private_reply(client: GraphClient, comment_id: str, message: str) -> di
         recipient=json.dumps({"comment_id": comment_id}),
         message=json.dumps({"text": message}),
     )
+
+
+def create_comment(client: GraphClient, media_id: str, message: str) -> dict[str, Any]:
+    """Public top-level comment on media owned by the authenticated account."""
+    media_id = _require("media_id", media_id)
+    message = _require("message", message)
+    return client.post(f"{media_id}/comments", message=message)
+
+
+def reply_to_comment(client: GraphClient, comment_id: str, message: str) -> dict[str, Any]:
+    """Public reply under an existing comment."""
+    comment_id = _require("comment_id", comment_id)
+    message = _require("message", message)
+    return client.post(f"{comment_id}/replies", message=message)
