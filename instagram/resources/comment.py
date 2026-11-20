@@ -1,15 +1,6 @@
-"""Comment resource: n8n Instagram node -> Comment operasyonlari.
-
-Operasyonlar (n8n'deki sirayla):
-  Delete, Disable Comments, Enable Comments, Hide, List,
-  Send Private Reply, Unhide
-
-Extras (Graph API / gap close):
-  Create Comment, Reply To Comment
-"""
+"""Comment resource: list, moderate, create, and reply."""
 from __future__ import annotations
 
-import json
 from typing import Any, Iterator, Optional
 
 from ..client import GraphClient
@@ -86,21 +77,6 @@ def disable_comments(client: GraphClient, media_id: str) -> dict[str, Any]:
 
 def enable_comments(client: GraphClient, media_id: str) -> dict[str, Any]:
     return client.post(_require("media_id", media_id), comment_enabled=True)
-
-def send_private_reply(client: GraphClient, comment_id: str, message: str) -> dict[str, Any]:
-    """Yorum yapana ozel mesaj gonderir.
-
-    Kisitlar (Meta): yorum basina tek mesaj, yorumdan sonra 7 gun icinde;
-    Live yorumlarinda sadece yayin sirasinda. Hesapta mesajlasma izni gerekir.
-    Cevap: {"recipient_id": ..., "message_id": ...}
-    """
-    comment_id = _require("comment_id", comment_id)
-    message = _require("message", message)
-    return client.post(
-        f"{client.node}/messages",
-        recipient=json.dumps({"comment_id": comment_id}),
-        message=json.dumps({"text": message}),
-    )
 
 
 def create_comment(client: GraphClient, media_id: str, message: str) -> dict[str, Any]:

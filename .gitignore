@@ -9,4 +9,10 @@ venv/
 .idea/
 .vscode/
 *.log
-token/
+token/# live test artifacts
+test_content/*.mp4
+test_content/*.png
+test_content/*.jpg
+test_content/*.jpeg
+test_content/_last_image_url.txt
+test_content/job_*.json

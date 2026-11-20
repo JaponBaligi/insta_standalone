@@ -1,4 +1,3 @@
-import json
 import unittest
 
 from instagram.resources import comment
@@ -106,29 +105,6 @@ class ModerationTests(unittest.TestCase):
                    comment.disable_comments, comment.enable_comments):
             with self.assertRaises(ValueError, msg=fn.__name__):
                 fn(c, " ")
-        self.assertEqual(c.calls, [])
-
-
-class PrivateReplyTests(unittest.TestCase):
-    def test_payload(self):
-        c = FakeClient({("POST", "1784/messages"): {"recipient_id": "r", "message_id": "m"}})
-        result = comment.send_private_reply(c, " c1 ", "hello")
-        self.assertEqual(result["message_id"], "m")
-        params = c.calls[0][2]
-        self.assertEqual(json.loads(params["recipient"]), {"comment_id": "c1"})
-        self.assertEqual(json.loads(params["message"]), {"text": "hello"})
-
-    def test_unicode_message_roundtrips(self):
-        c = FakeClient({("POST", "1784/messages"): {}})
-        comment.send_private_reply(c, "c1", "Merhaba çğıöşü 👋")
-        self.assertEqual(json.loads(c.calls[0][2]["message"])["text"], "Merhaba çğıöşü 👋")
-
-    def test_validation(self):
-        c = FakeClient()
-        with self.assertRaises(ValueError):
-            comment.send_private_reply(c, "", "hi")
-        with self.assertRaises(ValueError):
-            comment.send_private_reply(c, "c1", "  ")
         self.assertEqual(c.calls, [])
 
 
