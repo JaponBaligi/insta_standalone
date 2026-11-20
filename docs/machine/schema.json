@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "files": {
+    "index.json": "Lightweight list of all docs without content bodies.",
+    "catalog.json": "Full catalog including content for every docs file.",
+    "documents.jsonl": "Same documents as catalog, one JSON object per line.",
+    "schema.json": "This schema description.",
+    "generate.py": "Regenerator script.",
+    "README.md": "Human note for this folder."
+  },
+  "document_fields": {
+    "id": "Stable id derived from path under docs/.",
+    "path": "Repo-relative path starting with docs/.",
+    "relative_to_docs": "Path relative to docs/.",
+    "kind": "guide | index | node",
+    "format": "File extension without dot (usually md).",
+    "purpose": "Short machine-oriented purpose string.",
+    "related_source": "Primary instagram/* source path(s), or null.",
+    "bytes": "File size in bytes.",
+    "line_count": "Approximate line count.",
+    "content": "Full UTF-8 text of the document (catalog.json / documents.jsonl only)."
+  }
+}

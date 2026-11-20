@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20T05:49:15Z",
+  "catalog": "docs/machine/catalog.json",
+  "documents": [
+    {
+      "id": "nodes.automation",
+      "path": "docs/nodes/automation.md",
+      "kind": "node",
+      "purpose": "Inbound automation HTTP/CLI trigger (Telegram-style job JSON + Bearer auth).",
+      "related_source": "instagram/automation/*, instagram/runner.py",
+      "line_count": 24
+    },
+    {
+      "id": "nodes.client",
+      "path": "docs/nodes/client.md",
+      "kind": "node",
+      "purpose": "GraphClient HTTP + token auto-refresh.",
+      "related_source": "instagram/client.py",
+      "line_count": 30
+    },
+    {
+      "id": "nodes.config",
+      "path": "docs/nodes/config.md",
+      "kind": "node",
+      "purpose": ".env Config loading and IG_NODE rules.",
+      "related_source": "instagram/config.py",
+      "line_count": 23
+    },
+    {
+      "id": "nodes.exceptions",
+      "path": "docs/nodes/exceptions.md",
+      "kind": "node",
+      "purpose": "Exception taxonomy for the package.",
+      "related_source": "instagram/exceptions.py",
+      "line_count": 23
+    },
+    {
+      "id": "nodes.publisher",
+      "path": "docs/nodes/publisher.md",
+      "kind": "node",
+      "purpose": "Shared media container create/wait/publish pipeline.",
+      "related_source": "instagram/publisher.py",
+      "line_count": 25
+    },
+    {
+      "id": "nodes.README",
+      "path": "docs/nodes/README.md",
+      "kind": "index",
+      "purpose": "Index of per-module node documentation under docs/nodes.",
+      "related_source": null,
+      "line_count": 25
+    },
+    {
+      "id": "nodes.resources.auth",
+      "path": "docs/nodes/resources/auth.md",
+      "kind": "node",
+      "purpose": "Auth helpers: me, exchange, refresh.",
+      "related_source": "instagram/resources/auth.py",
+      "line_count": 21
+    },
+    {
+      "id": "nodes.resources.carousel",
+      "path": "docs/nodes/resources/carousel.md",
+      "kind": "node",
+      "purpose": "Carousel/album publish.",
+      "related_source": "instagram/resources/carousel.py",
+      "line_count": 27
+    },
+    {
+      "id": "nodes.resources.comment",
+      "path": "docs/nodes/resources/comment.md",
+      "kind": "node",
+      "purpose": "Comment list/moderate/create/reply.",
+      "related_source": "instagram/resources/comment.py",
+      "line_count": 24
+    },
+    {
+      "id": "nodes.resources.image",
+      "path": "docs/nodes/resources/image.md",
+      "kind": "node",
+      "purpose": "Feed image publish.",
+      "related_source": "instagram/resources/image.py",
+      "line_count": 26
+    },
+    {
+      "id": "nodes.resources.page",
+      "path": "docs/nodes/resources/page.md",
+      "kind": "node",
+      "purpose": "Facebook Page listing and Instagram business account discovery.",
+      "related_source": "instagram/resources/page.py",
+      "line_count": 19
+    },
+    {
+      "id": "nodes.resources.reel",
+      "path": "docs/nodes/resources/reel.md",
+      "kind": "node",
+      "purpose": "Reels publish.",
+      "related_source": "instagram/resources/reel.py",
+      "line_count": 19
+    },
+    {
+      "id": "nodes.resources.story",
+      "path": "docs/nodes/resources/story.md",
+      "kind": "node",
+      "purpose": "Stories publish.",
+      "related_source": "instagram/resources/story.py",
+      "line_count": 20
+    },
+    {
+      "id": "nodes.resources.user",
+      "path": "docs/nodes/resources/user.md",
+      "kind": "node",
+      "purpose": "IG user profile and owned media listing.",
+      "related_source": "instagram/resources/user.py",
+      "line_count": 20
+    },
+    {
+      "id": "nodes.token_store",
+      "path": "docs/nodes/token_store.md",
+      "kind": "node",
+      "purpose": "Persistent token/.token.json store.",
+      "related_source": "instagram/token_store.py",
+      "line_count": 24
+    },
+    {
+      "id": "nodes.webhook.handlers",
+      "path": "docs/nodes/webhook/handlers.md",
+      "kind": "node",
+      "purpose": "Meta webhook challenge, HMAC signature, event parse helpers.",
+      "related_source": "instagram/webhook/handlers.py",
+      "line_count": 23
+    },
+    {
+      "id": "nodes.webhook.server",
+      "path": "docs/nodes/webhook/server.md",
+      "kind": "node",
+      "purpose": "Stdlib Meta Instagram webhook HTTP server.",
+      "related_source": "instagram/webhook/server.py",
+      "line_count": 22
+    },
+    {
+      "id": "USAGE",
+      "path": "docs/USAGE.md",
+      "kind": "guide",
+      "purpose": "Human setup and end-to-end usage guide for the Instagram Graph client and automation trigger.",
+      "related_source": null,
+      "line_count": 248
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 # Using insta_standalone
 
 Python client for the **Instagram Graph API** (`graph.facebook.com`) aimed at
-Instagram **Business / Creator** accounts linked to a Facebook Page. It mirrors
-the community n8n Instagram node surface (publish, comments, DMs, hashtags,
-webhooks) plus insights.
+Instagram **Business / Creator** accounts linked to a Facebook Page. Supported
+surface: publish (image, reel, story, carousel), comments, auth/page helpers,
+and Meta webhooks.
 
-> Unit tests use a fake Graph API. Expect live Meta quirks (permissions, metric
-> names, media URL reachability) when you first hit production.
+> Unit tests use a fake Graph API. Use `test_content/run_live_features.py` against
+> a real token when you need end-to-end proof.
 
 ---
 
@@ -14,11 +14,11 @@ webhooks) plus insights.
 
 1. A Meta developer app with Instagram Graph API access.
 2. An Instagram **professional** account linked to a Facebook Page.
-3. A **long-lived** Facebook user (or page) access token with scopes such as:
+3. A **long-lived** Facebook user access token with scopes such as:
    - `instagram_basic` / `pages_show_list`
    - `instagram_content_publish`
    - `pages_read_engagement`
-   - `instagram_manage_comments` (and messaging scopes if you send DMs)
+   - `instagram_manage_comments`
 4. `FB_APP_ID` + `FB_APP_SECRET` if you want automatic token refresh or webhooks.
 
 Use [Graph API Explorer](https://developers.facebook.com/tools/explorer/) or your
@@ -66,11 +66,15 @@ from instagram.resources import page
 
 client = GraphClient()  # reads .env
 pages = page.list_pages(client)
-print(pages)  # pick a Page id
+print(pages)  # pick a Page id (may be [] with granular Page tokens)
 
 ig = page.get_instagram_account(client, page_id="<PAGE_ID>")
 print(ig["instagram_business_account"]["id"])  # ← put this in IG_NODE
 ```
+
+If `me/accounts` is empty, use Page ids from `debug_token` → `granular_scopes`
+and call `get_instagram_account` with each Page id until you see
+`instagram_business_account`.
 
 Set `IG_NODE` in `.env`, then recreate the client (or restart your process).
 
@@ -97,22 +101,41 @@ print(auth.get_me(client))
 print(user.get(client))
 ```
 
-Run unit tests anytime (no Meta network):
-
 ```bash
 python -m unittest discover -s instagram/resources/tests -p "test_*.py"
+python test_content/run_live_features.py
 ```
+
+### Automation trigger (Telegram → publish)
+
+```bash
+# .env: AUTOMATION_TOKEN=long-random-secret
+python -m instagram.runner serve --port 8787
+```
+
+```http
+POST /v1/publish
+Authorization: Bearer <AUTOMATION_TOKEN>
+Content-Type: application/json
+
+{"type":"image","image_url":"https://example.com/a.jpg","caption":"from telegram"}
+```
+
+One-shot without HTTP:
+
+```bash
+python -m instagram.runner publish --file job.json
+```
+
+See [nodes/automation.md](nodes/automation.md).
 
 ---
 
 ## Everyday usage
 
-Always create one `GraphClient`, then call resource helpers.
-
 ```python
 from instagram.client import GraphClient
-from instagram.resources import image, reel, story, carousel, comment, messaging
-from instagram.resources import hashtag, insights, user
+from instagram.resources import image, reel, story, carousel, comment, user
 
 client = GraphClient()
 ```
@@ -139,9 +162,6 @@ carousel.publish_carousel(
 )
 ```
 
-Publishing uses create container → poll until ready → `media_publish`. Reels /
-stories / carousels default to a longer timeout (900s).
-
 ### Comments
 
 ```python
@@ -151,36 +171,14 @@ comment.reply_to_comment(client, comment_id, "Thanks!")
 comment.hide_comment(client, comment_id)
 comment.delete_comment(client, comment_id)
 comment.disable_comments(client, media_id)
-comment.send_private_reply(client, comment_id, "DM from comment")  # Meta windows apply
+comment.enable_comments(client, media_id)
 ```
 
-### Messaging
+### Profile
 
 ```python
-messaging.send_message(client, recipient_id="<IGSID>", message_text="Hi")
-```
-
-Recipient must be an Instagram-scoped ID (usually from a webhook), within Meta’s
-messaging windows.
-
-### Hashtags & profile
-
-```python
-hid = hashtag.get_hashtag_id(client, "travel")
-hashtag.get_recent_media(client, hashtag_id=hid, limit=25)
-hashtag.get_top_media(client, hashtag_name="travel", return_all=True)  # capped by max_items (500)
-
 user.get(client)
 user.get_media(client, limit=25)
-```
-
-### Insights
-
-Metric names change with Meta’s API — pass what your app is allowed to read.
-
-```python
-insights.get_account_insights(client, metrics=["reach", "views"], period="day")
-insights.get_media_insights(client, media_id, metrics=["likes", "comments", "reach"])
 ```
 
 ### Auth helpers
@@ -197,20 +195,13 @@ auth.refresh_access_token(client)  # re-exchange + persist
 
 ## Webhooks
 
-### Library helpers
-
 ```python
 from instagram.webhook import verify_challenge, verify_signature, parse_events
 
 challenge = verify_challenge(query_dict, verify_token="...")
 ok = verify_signature(raw_body, header, app_secret="...")
 events = parse_events(payload, include={"comments", "messages"})
-# each event: {object, field, value, id, time}
 ```
-
-### Built-in HTTP server
-
-Expose a public HTTPS URL (ngrok, reverse proxy, etc.) to Meta.
 
 ```python
 from instagram.webhook.server import serve_forever
@@ -219,15 +210,10 @@ def on_event(event):
     print(event["field"], event["value"])
 
 serve_forever(host="0.0.0.0", port=8080, on_event=on_event)
-# GET/POST http://<host>:8080/webhook
-# Needs IG_WEBHOOK_VERIFY_TOKEN + FB_APP_SECRET in the environment
 ```
 
-In Meta App Dashboard → Webhooks → Instagram:
-
-- Callback URL = your public `/webhook`
-- Verify token = same as `IG_WEBHOOK_VERIFY_TOKEN`
-- Subscribe to fields you care about (`comments`, `messages`, `mentions`, …)
+Needs `IG_WEBHOOK_VERIFY_TOKEN` + `FB_APP_SECRET`. Point Meta’s Instagram
+webhook callback at your public `/webhook` URL.
 
 ---
 
@@ -239,7 +225,7 @@ In Meta App Dashboard → Webhooks → Instagram:
 | `instagram/config.py` | `.env` → `Config` |
 | `instagram/token_store.py` | `token/.token.json` |
 | `instagram/publisher.py` | Container create / wait / publish |
-| `instagram/resources/*` | Image, reel, story, carousel, comment, messaging, hashtag, user, page, auth, insights |
+| `instagram/resources/*` | Image, reel, story, carousel, comment, user, page, auth |
 | `instagram/webhook/` | Challenge, HMAC, parse, stdlib server |
 | `instagram/exceptions.py` | `ConfigError`, `GraphAPIError`, `MediaTimeoutError`, `CarouselItemError`, … |
 
@@ -252,11 +238,11 @@ In Meta App Dashboard → Webhooks → Instagram:
 - `MediaProcessingError` / `MediaTimeoutError` — container never becomes ready
 - `CarouselItemError` — which child failed (index + type)
 - Auto-refresh failures **warn** and continue with the old token
-- Hashtag `return_all=True` stops at `max_items` (default 500)
-- Private replies / DMs follow Meta time windows (document those in Meta’s docs)
 
 ---
 
 ## Related docs
 
 - [README](../README.md) — short overview
+- [nodes/](nodes/README.md) — per-module notes (limits + usage)
+- [machine/](machine/README.md) — machine-readable JSON/JSONL mirror of docs/

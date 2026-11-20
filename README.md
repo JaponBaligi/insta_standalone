@@ -1,9 +1,8 @@
 # insta_standalone
 
 Python Instagram Graph API client (`graph.facebook.com`) for Business/Creator
-accounts: publish (image, reel, story, carousel), comments, messaging, hashtags,
-insights, and Meta webhooks. Resource layout follows the community n8n Instagram
-node where applicable.
+accounts: publish (image, reel, story, carousel), comments, and Meta webhooks.
+Resource layout follows the community n8n Instagram node where applicable.
 
 **Full setup and usage:** [docs/USAGE.md](docs/USAGE.md)
 
@@ -20,6 +19,7 @@ Fill at least:
 - `IG_NODE` — Instagram account ID (**not** `me`)
 
 Discover `IG_NODE` with `list_pages()` → `get_instagram_account()` (see the usage guide).
+If `me/accounts` is empty, query your Page id directly for `instagram_business_account`.
 
 ```python
 from instagram.client import GraphClient
@@ -41,10 +41,18 @@ image.publish_image(client, "https://example.com/photo.jpg", caption="Hello")
 python -m unittest discover -s instagram/resources/tests -p "test_*.py"
 ```
 
-Not exercised against live Meta — tests use a fake Graph API.
+Live smoke (needs real `.env` + media in `test_content/`):
+
+```bash
+python test_content/run_live_features.py
+```
+
+Unit tests use a fake Graph API; the live runner hits Meta.
 
 ## Docs
 
 | Doc | Purpose |
 |-----|---------|
 | [docs/USAGE.md](docs/USAGE.md) | Setup phases, API examples, webhooks |
+| [docs/nodes/](docs/nodes/README.md) | Per-module notes for `instagram/*` |
+| [docs/machine/](docs/machine/README.md) | Machine-readable JSON/JSONL docs catalog |
